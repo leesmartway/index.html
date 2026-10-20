@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delco-Remy DC Generator — 3D Assembly Trainer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600;700&display=swap');
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+  :root {
+    --bg:#0d1117; --panel:#161b22; --border:#30363d; --accent:#4caf7d;
+    --text:#e6edf3; --muted:#8b949e; --highlight:#58a6ff; --green:#3fb950; --danger:#f85149;
+    color-scheme: dark;
+  }
+  html, body { height:100%; }
+  body { background:var(--bg); color:var(--text); font-family:'Inter',system-ui,sans-serif;
+    font-size:14px; display:flex; flex-direction:column; overflow:hidden; }
+  header { background:var(--panel); border-bottom:1px solid var(--border); padding:10px 16px;
+    display:flex; align-items:center; justify-content:space-between; flex-shrink:0; flex-wrap:wrap; gap:8px; }
+  .header-title { display:flex; align-items:center; gap:12px; }
+  .badge { background:var(--accent); color:#000; font-family:'Share Tech Mono',monospace;
+    font-size:11px; font-weight:700; padding:3px 8px; border-radius:3px; letter-spacing:.05em; }
+  header h1 { font-size:15px; font-weight:600; }
+  header p { font-size:11px; color:var(--muted); }
+  .header-controls { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .main { flex:1; display:flex; overflow:hidden; min-height:0; }
+  .sidebar { width:230px; background:var(--panel); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
+  .sidebar-header, .info-header { padding:10px 14px; font-size:10px; font-weight:700;
+    letter-spacing:.12em; color:var(--muted); border-bottom:1px solid var(--border); text-transform:uppercase; }
+  .parts-list { flex:1; overflow-y:auto; padding:6px 0; }
+  .parts-list::-webkit-scrollbar { width:4px; }
+  .parts-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+  .part-group-label { padding:8px 14px 4px; font-size:9px; font-weight:700;
+    letter-spacing:.1em; color:var(--accent); text-transform:uppercase; }
+  .part-item { display:flex; align-items:center; gap:8px; padding:5px 14px; cursor:pointer;
+    transition:background .15s; border-left:2px solid transparent; }
+  .part-item:hover { background:rgba(255,255,255,.04); }
+  .part-item.active { background:rgba(76,175,125,.08); border-left-color:var(--accent); }
+  .part-item.hidden-part { opacity:.35; }
+  .part-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; border:1px solid rgba(255,255,255,.15); }
+  .part-name { font-size:12px; line-height:1.3; flex:1; }
+  .part-vis { font-size:10px; color:var(--muted); cursor:pointer; padding:2px 4px; border-radius:3px; }
+  .part-vis:hover { color:var(--text); }
+  .viewport { flex:1; position:relative; overflow:hidden; min-width:0; }
+  #canvas3d { width:100%; height:100%; display:block; }
+  .viewport-overlay { position:absolute; top:12px; left:12px; display:flex;
+    flex-direction:column; gap:6px; pointer-events:none; }
+  .view-hint { background:rgba(13,17,23,.75); border:1px solid var(--border);
+    border-radius:4px; padding:5px 10px; font-size:11px; color:var(--muted); }
+  .info-panel { width:260px; background:var(--panel); border-left:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden; flex-shrink:0; }
+  .part-detail { padding:16px 14px; flex:1; overflow-y:auto; }
+  .part-detail h2 { font-size:15px; font-weight:700; margin-bottom:3px; color:var(--accent); }
+  .part-detail .part-id { font-family:'Share Tech Mono',monospace; font-size:10px;
+    color:var(--muted); margin-bottom:12px; }
+  .detail-section { margin-bottom:14px; }
+  .detail-label { font-size:9px; font-weight:700; letter-spacing:.1em; color:var(--muted);
+    text-transform:uppercase; margin-bottom:5px; }
+  .detail-text { font-size:12px; line-height:1.6; }
+  .spec-table { width:100%; border-collapse:collapse; }
+  .spec-table td { padding:3px 0; font-size:11px; vertical-align:top; }
+  .spec-table td:first-child { color:var(--muted); width:45%; padding-right:8px; }
+  .spec-table td:last-child { font-family:'Share Tech Mono',monospace; }
+  .no-selection { padding:40px 14px; text-align:center; color:var(--muted);
+    font-size:12px; line-height:1.7; }
+  .no-selection .icon { font-size:36px; margin-bottom:12px; opacity:.4; }
+  .step-panel { background:var(--panel); border-top:1px solid var(--border);
+    padding:10px 16px; display:flex; align-items:center; gap:12px; flex-shrink:0; flex-wrap:wrap; }
+  .step-label { font-size:10px; font-weight:700; letter-spacing:.1em; color:var(--muted);
+    text-transform:uppercase; white-space:nowrap; }
+  .step-steps { display:flex; gap:4px; flex:1; overflow-x:auto; padding-bottom:2px; min-width:0; }
+  .step-steps::-webkit-scrollbar { height:3px; }
+  .step-steps::-webkit-scrollbar-thumb { background:var(--border); }
+  .step-dot { width:28px; height:28px; border-radius:50%; border:2px solid var(--border);
+    background:var(--bg); display:flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:700; cursor:pointer; flex-shrink:0; transition:all .2s;
+    color:var(--muted); font-family:'Share Tech Mono',monospace; }
+  .step-dot:hover { border-color:var(--accent); color:var(--accent); }
+  .step-dot.done { background:var(--green); border-color:var(--green); color:#000; }
+  .step-dot.current { background:var(--accent); border-color:var(--accent); color:#000; }
+  .step-desc { font-size:12px; min-width:200px; max-width:320px; line-height:1.4; }
+  .btn { padding:6px 12px; border:1px solid var(--border); background:transparent;
+    color:var(--text); font-size:12px; font-family:'Inter',system-ui,sans-serif; border-radius:5px;
+    cursor:pointer; transition:all .2s; white-space:nowrap; display:flex; align-items:center; gap:5px; }
+  .btn:hover, .btn:focus-visible { border-color:var(--accent); color:var(--accent); outline:none; }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:#000; font-weight:600; }
+  .btn.primary:hover { background:#3d9e6a; color:#000; }
+  .btn.danger { border-color:var(--danger); color:var(--danger); }
+  .btn.active-btn { background:rgba(88,166,255,.1); border-color:var(--highlight); color:var(--highlight); }
+  .slider-wrap { display:flex; align-items:center; gap:8px; padding:0 4px; }
+  .slider-wrap label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+  input[type=range] { width:110px; accent-color:var(--accent); }
+  #loading { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; z-index:999; gap:16px; }
+  .loading-title { font-size:22px; font-weight:700; color:var(--accent); font-family:'Share Tech Mono',monospace; }
+  .loading-bar { width:220px; height:3px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .loading-bar-fill { height:100%; background:linear-gradient(90deg,#4caf7d,#2d7a55);
+    border-radius:2px; animation:loadfill 1.2s ease-out forwards; }
+  @keyframes loadfill { from{width:0} to{width:100%} }
+  .loading-sub { font-size:12px; color:var(--muted); }
+  #tooltip { position:fixed; background:var(--panel); border:1px solid var(--accent);
+    border-radius:5px; padding:6px 10px; font-size:12px; pointer-events:none;
+    display:none; z-index:100; color:var(--accent); font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.5); }
+  @media (max-width:860px){ .sidebar, .info-panel { display:none; } }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="loading-title">DELCO-REMY</div>
+  <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+  <div class="loading-sub">Building DC Generator Assembly…</div>
+</div>
+<div id="tooltip"></div>
+
+<header>
+  <div class="header-title">
+    <span class="badge">DC-GEN</span>
+    <div>
+      <h1>Delco-Remy DC Generator — 5⅝″ Frame</h1>
+      <p>Interactive 3D Assembly &amp; Disassembly — Avionics Training Aid</p>
+    </div>
+  </div>
+  <div class="header-controls">
+    <div class="slider-wrap">
+      <label for="explodeSlider">Explode</label>
+      <input type="range" id="explodeSlider" min="0" max="100" value="0">
+    </div>
+    <button class="btn" id="btnExplode">⬡ Explode</button>
+    <button class="btn" id="btnAssemble">⬢ Assemble</button>
+    <button class="btn" id="btnPhoto">◎ Comm-End View</button>
+    <button class="btn" id="btnStepMode">▶ Step Mode</button>
+    <button class="btn" id="btnAutoRotate">↻ Rotate</button>
+    <button class="btn" id="btnReset">⟳ Reset</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-header">Components</div>
+    <div class="parts-list" id="partsList"></div>
+  </div>
+  <div class="viewport">
+    <canvas id="canvas3d"></canvas>
+    <div class="viewport-overlay">
+      <div class="view-hint">🖱 Drag orbit · Scroll zoom · Right-drag pan</div>
+      <div class="view-hint" id="photoHint" style="display:none;color:var(--highlight)">Comm-End View: CE frame &amp; bolts hidden — looking into the field frame</div>
+      <div class="view-hint" id="stepHint" style="display:none;color:var(--accent)">Step Mode: ← → keys</div>
+    </div>
+  </div>
+  <div class="info-panel">
+    <div class="info-header">Part Details</div>
+    <div class="part-detail" id="partDetail">
+      <div class="no-selection"><div class="icon">⚙</div>
+        Click any component to see details.<br><br>Try <b>Comm-End View</b> to look inside the field frame with the commutator end frame off.</div>
+    </div>
+  </div>
+</div>
+
+<div class="step-panel" id="stepPanel" style="display:none">
+  <span class="step-label">Disassembly</span>
+  <div class="step-steps" id="stepDots"></div>
+  <div class="step-desc" id="stepDesc">—</div>
+  <button class="btn" id="btnPrevStep">◀ Prev</button>
+  <button class="btn primary" id="btnNextStep">Next ▶</button>
+  <button class="btn danger" id="btnExitStep">✕ Exit</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+const PI = Math.PI, D2R = PI/180;
+
+// ═══════════════════════════════════════════
+//  TEXTURES (braided cloth leads)
+// ═══════════════════════════════════════════
+function makeBraid(base, light, dark){
+  const c=document.createElement('canvas'); c.width=64; c.height=32;
+  const x=c.getContext('2d');
+  x.fillStyle=base; x.fillRect(0,0,64,32);
+  x.lineWidth=3;
+  for(let i=-32;i<96;i+=8){
+    x.strokeStyle=light; x.beginPath(); x.moveTo(i,0); x.lineTo(i+16,32); x.stroke();
+    x.strokeStyle=dark;  x.beginPath(); x.moveTo(i+16,0); x.lineTo(i,32); x.stroke();
+  }
+  const t=new THREE.CanvasTexture(c);
+  t.wrapS=t.wrapT=THREE.RepeatWrapping; t.encoding=THREE.sRGBEncoding;
+  return t;
+}
+const BRAID_BLACK  = makeBraid('#1b1b1b','#3a3a3a','#0b0b0b');
+const BRAID_COPPER = makeBraid('#a8642e','#e09a5c','#6e3d18');
+
+// ═══════════════════════════════════════════
+//  MATERIALS
+// ═══════════════════════════════════════════
+const std = (o)=> new THREE.MeshStandardMaterial(o);
+const M = {
+  paintGreen:  ()=> std({color:0x3e5d53, metalness:0.20, roughness:0.62}),
+  paintGreenDk:()=> std({color:0x30483f, metalness:0.20, roughness:0.66}),
+  alumCast:    ()=> std({color:0x9aa1a8, metalness:0.50, roughness:0.55}),
+  steel:       ()=> std({color:0xcfd2d6, metalness:0.80, roughness:0.22}),
+  steelPolish: ()=> std({color:0xe4e6e9, metalness:0.95, roughness:0.12}),
+  steelDark:   ()=> std({color:0x6b6f74, metalness:0.70, roughness:0.40}),
+  zinc:        ()=> std({color:0xb0b4ba, metalness:0.65, roughness:0.35}),
+  ironDark:    ()=> std({color:0x3a3d42, metalness:0.60, roughness:0.55}),
+  ironLam:     ()=> std({color:0x4a4e54, metalness:0.65, roughness:0.45}),
+  copper:      ()=> std({color:0xb87333, metalness:0.75, roughness:0.35}),
+  copperBar:   ()=> std({color:0xa65f2c, metalness:0.75, roughness:0.38}),
+  copperPlate: ()=> std({color:0xc98552, metalness:0.80, roughness:0.30}),
+  copperWound: ()=> std({color:0xa8662e, metalness:0.55, roughness:0.50}),
+  micaGap:     ()=> std({color:0x2a1a10, metalness:0.10, roughness:0.80}),
+  carbon:      ()=> std({color:0x26282d, metalness:0.15, roughness:0.85}),
+  bakelite:    ()=> std({color:0x3a2412, metalness:0.05, roughness:0.70}),
+  fiber:       ()=> std({color:0xc8a96e, metalness:0.02, roughness:0.92}),
+  fiberGreen:  ()=> std({color:0x6f8a6a, metalness:0.05, roughness:0.80}),
+  fiberOlive:  ()=> std({color:0x7d7a4a, metalness:0.05, roughness:0.80}),
+  tapeBlack:   ()=> std({color:0x121110, metalness:0.10, roughness:0.60}),
+  gasket:      ()=> std({color:0x8b6914, metalness:0.02, roughness:0.88}),
+  wireRed:     ()=> std({color:0xc8201c, metalness:0.05, roughness:0.45}),
+  sleeveTan:   ()=> std({color:0xb59a52, metalness:0.05, roughness:0.75}),
+  braidBlack:  ()=> std({map:BRAID_BLACK,  metalness:0.05, roughness:0.90}),
+  braidCopper: ()=> std({map:BRAID_COPPER, metalness:0.50, roughness:0.50}),
+};
+
+// ═══════════════════════════════════════════
+//  GEOMETRY HELPERS  (shaft axis = Z, commutator end = +Z)
+// ═══════════════════════════════════════════
+const V = (x,y,z)=> new THREE.Vector3(x,y,z);
+const cylP = (deg,r,z)=> V(r*Math.cos(deg*D2R), r*Math.sin(deg*D2R), z);
+
+function lathe(profile, mat, segs=48) {
+  const pts = profile.map(p => new THREE.Vector2(p[0], p[1]));
+  const m   = new THREE.Mesh(new THREE.LatheGeometry(pts, segs), mat);
+  m.rotation.x = PI/2;
+  m.material.side = THREE.DoubleSide;
+  return m;
+}
+function cylZ(rT, rB, len, mat, segs=32) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rT, rB, len, segs), mat);
+  m.rotation.x = PI/2; return m;
+}
+function cylX(r, len, mat, segs=16) {           // axis along local X (radial in rotated groups)
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, segs), mat);
+  m.rotation.z = PI/2; return m;
+}
+function torusZ(r, tube, mat, segs=32, arc=PI*2) {
+  return new THREE.Mesh(new THREE.TorusGeometry(r, tube, 12, segs, arc), mat);
+}
+function boxAt(w,h,d, mat, x=0,y=0,z=0) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  m.position.set(x,y,z); return m;
+}
+function hexNut(r, mat) {
+  const g = new THREE.Group();
+  g.add(cylZ(r,r, r*0.85, mat, 6));
+  g.add(cylZ(r*0.42, r*0.42, r*0.95, M.ironDark(), 12));
+  return g;
+}
+function slotScrew(r, x,y,z){              // round-head slotted screw, axis +Z
+  const g=new THREE.Group();
+  const h=cylZ(r, r*1.05, r*0.7, M.zinc(), 16); g.add(h);
+  const s=boxAt(r*1.8, r*0.25, r*0.3, M.ironDark(), 0,0, r*0.3); g.add(s);
+  g.position.set(x,y,z); return g;
+}
+// Smooth tube along points; braided materials get the weave scaled to wire length
+function tube(vecs, rad, mat, caps=true) {
+  const g=new THREE.Group();
+  const c=new THREE.CatmullRomCurve3(vecs, false, 'centripetal');
+  if (mat.map) {
+    mat.map = mat.map.clone(); mat.map.needsUpdate = true;
+    mat.map.repeat.set(Math.max(1, c.getLength()*9), 2);
+  }
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(c, Math.max(16, vecs.length*14), rad, 10, false), mat));
+  if (caps) [vecs[0], vecs[vecs.length-1]].forEach(p=>{
+    const s=new THREE.Mesh(new THREE.SphereGeometry(rad,10,8), mat); s.position.copy(p); g.add(s);
+  });
+  return g;
+}
+// Rounded rectangle (s = arc length, z) for a field coil wrapped on a cylinder
+function rrect(hw, hl, cr, nc=6) {
+  const corners=[[hw-cr,hl-cr,0],[-(hw-cr),hl-cr,PI/2],[-(hw-cr),-(hl-cr),PI],[hw-cr,-(hl-cr),1.5*PI]];
+  const pts=[];
+  corners.forEach(([cx,cz,a0],k)=>{
+    for(let i=0;i<=nc;i++){ const a=a0+i/nc*PI/2; pts.push([cx+cr*Math.cos(a), cz+cr*Math.sin(a)]); }
+    const n=corners[(k+1)%4], nx=n[0]+cr*Math.cos(n[2]), nz=n[1]+cr*Math.sin(n[2]);
+    const last=pts[pts.length-1];
+    for(let j=1;j<4;j++) pts.push([last[0]+(nx-last[0])*j/4, last[1]+(nz-last[1])*j/4]);
+  });
+  return pts;
+}
+
+// ═══════════════════════════════════════════
+//  SHARED DIMENSIONS
+// ═══════════════════════════════════════════
+const FR_IN=1.72, FR_OUT=1.86, FR_Z0=-1.25, FR_Z1=1.38;   // field frame
+const COMM_R=0.72, COMM_Z0=0.92, COMM_Z1=1.26;            // commutator
+const BRUSH_Z=(COMM_Z0+COMM_Z1)/2;                         // 1.09
+const BRUSH_GND=10, BRUSH_INS=190;                         // brush angles (deg), viewed from CE end
+const TERM_A=75, TERM_F=105, TERM_Z=1.02;                  // terminal studs through frame
+const BOLT_R=1.64, BOLT_ANG=[160,340];
+
+// ═══════════════════════════════════════════
+//  PART BUILDERS
+// ═══════════════════════════════════════════
+
+// 1 — COMMUTATOR END FRAME (cast, painted)
+function buildCEFrame() {
+  const g = new THREE.Group();
+  g.add(lathe([
+    [0.18, 0.52],[0.40, 0.52],[0.44, 0.28],
+    [1.20, 0.10],[1.76, 0.00],[1.86,-0.10],[1.86,-0.30],
+    [1.78,-0.30],[1.78,-0.08],[1.14, 0.06],[0.36, 0.24],[0.30, 0.48],[0.18, 0.48]
+  ], M.paintGreenDk()));
+  for (let i=0;i<8;i++) {
+    const a=(i/8)*PI*2+PI/8;
+    const v = boxAt(0.14,0.26,0.06, M.ironDark(), Math.cos(a)*0.80, Math.sin(a)*0.80, 0.18);
+    v.rotation.z=a+PI/2; g.add(v);
+  }
+  g.add(boxAt(0.20,0.38,0.32, M.paintGreenDk(), 0, 1.60, -0.12));   // mounting ear
+  return g;
+}
+
+// 2–8 — BRUSH ASSEMBLY: two box-type holders on the field-frame wall, spring arms, pigtails
+function buildBrushAssembly() {
+  const g = new THREE.Group();
+  [{deg:BRUSH_GND, ins:false},{deg:BRUSH_INS, ins:true}].forEach(({deg, ins})=>{
+    const b = new THREE.Group();            // local X = radial outward, Y = tangential, Z = shaft
+    b.rotation.z = deg*D2R; b.position.z = BRUSH_Z;
+
+    // mounting plate on frame wall — fiber insulator for the insulated (A) brush
+    b.add(boxAt(0.05, 0.62, 0.44, ins ? M.fiberGreen() : M.steelDark(), 1.685, 0, 0));
+    if (ins) b.add(boxAt(0.03, 0.50, 0.34, M.fiberGreen(), 1.645, 0, 0));
+    // bracket from wall to holder
+    b.add(boxAt(0.46, 0.14, 0.08, M.copperPlate(), 1.43, 0, -0.10));
+    b.add(slotScrew(0.05, 1.55, 0, -0.04));
+
+    // box holder (copper plated), open at commutator side so brush is visible
+    const hx=1.01, hl=0.42, hw=0.26, hd=0.22, t=0.025;
+    b.add(boxAt(hl, t, hd, M.copperPlate(), hx,  (hw-t)/2, 0));
+    b.add(boxAt(hl, t, hd, M.copperPlate(), hx, -(hw-t)/2, 0));
+    b.add(boxAt(hl, hw, t, M.copperPlate(), hx, 0, -(hd-t)/2));
+    b.add(boxAt(0.22, hw, t, M.copperPlate(), 1.11, 0, (hd-t)/2));   // short top wall
+
+    // carbon brush riding the commutator (r = 0.72)
+    b.add(boxAt(0.40, 0.20, 0.17, M.carbon(), 0.93, 0, 0));
+
+    // terminal tab + screw (pigtail connection)
+    b.add(boxAt(0.22, 0.18, 0.03, M.copperPlate(), 1.10, 0.25, 0.10));
+    b.add(slotScrew(0.05, 1.10, 0.27, 0.135));
+
+    // spring arm: pivot pin + torsion coils + arm pressing brush inward
+    b.add(boxAt(0.04, 0.04, 0.30, M.steel(), 1.44, -0.22, 0));
+    [-0.05, 0.05].forEach(zz=>{ const tc=torusZ(0.055,0.016,M.steel(),16); tc.position.set(1.44,-0.22,zz); b.add(tc); });
+    b.add(tube([V(1.47,-0.17,0.02),V(1.42,-0.06,0.02),V(1.30,0.0,0.02),V(1.16,0.0,0.02)], 0.022, M.copperPlate()));
+    b.add(boxAt(0.04, 0.10, 0.08, M.copperPlate(), 1.15, 0, 0.02));
+
+    // braided copper pigtail from brush to tab
+    b.add(tube([V(1.12,0.05,0.09),V(1.22,0.16,0.17),V(1.12,0.26,0.15)], 0.022, M.braidCopper()));
+    g.add(b);
+  });
+  return g;
+}
+
+// Internal leads: armature lead, field leads, coil series link, junction clip, red ground lead
+function buildLeads() {
+  const g = new THREE.Group();
+  const P = (pts)=> pts.map(p=>cylP(...p));
+  // Insulated brush → armature (A) terminal, run along the left wall
+  g.add(tube(P([[BRUSH_INS+14,1.13,1.24],[200,1.40,1.30],[175,1.58,1.26],[140,1.58,1.22],[110,1.42,1.26],[85,1.42,1.18],[TERM_A,1.50,1.06]]), 0.045, M.braidBlack()));
+  // Top coil start → field (F) terminal
+  g.add(tube(P([[126,1.45,0.74],[118,1.50,0.92],[TERM_F,1.50,1.00]]), 0.040, M.braidBlack()));
+  // Top coil finish → bottom coil (series link) around the right side, with tan sleeve
+  g.add(tube(P([[54,1.45,0.74],[44,1.58,0.82],[20,1.64,0.82],[-10,1.64,0.82],[-40,1.62,0.82],[-50,1.50,0.77],[-54,1.45,0.74]]), 0.040, M.braidBlack()));
+  g.add(tube(P([[-14,1.64,0.82],[-28,1.64,0.82],[-40,1.62,0.82]]), 0.068, M.sleeveTan()));
+  // Bottom coil finish → junction clip at 6 o'clock
+  g.add(tube(P([[234,1.45,0.74],[244,1.50,0.95],[266,1.46,1.12]]), 0.040, M.braidBlack()));
+  // Red ground lead: junction clip → grounded brush tab
+  g.add(tube(P([[274,1.42,1.18],[300,1.50,1.30],[330,1.50,1.34],[355,1.42,1.34],[BRUSH_GND+14,1.18,1.26]]), 0.040, M.wireRed()));
+
+  // Junction clip (steel tab + screw on fiber block)
+  const j = new THREE.Group(); j.rotation.z = 270*D2R; j.position.z = 1.05;
+  j.add(boxAt(0.10, 0.36, 0.26, M.fiberOlive(), 1.66, 0, 0));
+  j.add(boxAt(0.32, 0.22, 0.03, M.steelPolish(), 1.47, 0, 0.11));
+  j.add(boxAt(0.03, 0.22, 0.14, M.steelPolish(), 1.62, 0, 0.05));
+  j.add(slotScrew(0.065, 1.45, 0, 0.15));
+  g.add(j);
+  // locating dowel on the frame rim (12 o'clock)
+  const d = cylZ(0.035,0.035,0.12, M.steel(), 10); d.position.copy(cylP(92,1.79,FR_Z1+0.04)); g.add(d);
+  return g;
+}
+
+// 9, 13, 14, 20, 36 — TERMINAL STUDS through the field frame (A and F)
+function buildTerminals() {
+  const g = new THREE.Group();
+  [TERM_A, TERM_F].forEach(deg=>{
+    const t = new THREE.Group(); t.rotation.z = deg*D2R; t.position.z = TERM_Z;
+    t.add(cylX(0.05, 0.92, M.zinc(), 14)).children.slice(-1)[0].position.x = 1.86;
+    t.add(boxAt(0.14, 0.30, 0.26, M.fiberOlive(), 1.63, 0, 0));          // inside insulator block
+    const lug = torusZ(0.07,0.02,M.copper(),16); lug.rotation.y=PI/2; lug.position.x=1.54; t.add(lug);
+    const n0 = hexNut(0.075, M.zinc()); n0.rotation.y=PI/2; n0.position.x=1.47; t.add(n0);
+    const bush = cylX(0.11, 0.16, M.bakelite(), 18); bush.position.x=1.95; t.add(bush);   // outside bushing
+    const fw = torusZ(0.10,0.024,M.fiber(),18); fw.rotation.y=PI/2; fw.position.x=2.05; t.add(fw);
+    [2.13, 2.25].forEach(x=>{ const n=hexNut(0.10,M.zinc()); n.rotation.y=PI/2; n.position.x=x; t.add(n); });
+    g.add(t);
+  });
+  return g;
+}
+
+// 10 — BEARING WELL PLUG
+function buildBearingPlug() {
+  const g = new THREE.Group();
+  g.add(cylZ(0.28,0.28,0.12, M.paintGreenDk()));
+  g.add(cylZ(0.18,0.18,0.13, M.ironDark()));
+  return g;
+}
+
+// 11 — ARMATURE (shaft + laminated core + windings + commutator)
+function buildArmature() {
+  const g = new THREE.Group();
+  const shaft = cylZ(0.095,0.095, 5.65, M.steel()); shaft.position.z = -0.675; g.add(shaft);
+  // laminated core
+  for (let i=0;i<22;i++){
+    const d=cylZ(0.96,0.96,0.056, i%2?M.ironLam():M.ironDark(), 48);
+    d.position.z=-0.65+i*0.0619; g.add(d);
+  }
+  // slot conductors
+  for (let i=0;i<16;i++){
+    const p=new THREE.Group(); p.rotation.z=(i/16)*PI*2;
+    p.add(boxAt(0.05,0.07,1.36, M.copperWound(), 0.95,0,0)); g.add(p);
+  }
+  // end turns
+  [-0.78, 0.78].forEach(z=>{ const e=torusZ(0.76,0.13,M.copperWound(),42); e.position.z=z; g.add(e); });
+  // commutator riser
+  g.add(lathe([[0.18,0.92],[0.84,0.92],[0.84,0.86],[0.18,0.86],[0.18,0.92]], M.copper(), 52));
+  // commutator body (dark undercut mica shows between bars)
+  g.add(lathe([[0.10,COMM_Z1-0.02],[0.70,COMM_Z1-0.02],[0.70,COMM_Z0],[0.10,COMM_Z0],[0.10,COMM_Z1-0.02]], M.micaGap(), 52));
+  // copper bars as true wedge segments separated by undercut mica
+  const N=26, half=(PI/N)*0.86, barMat=M.copperBar();
+  for (let i=0;i<N;i++){
+    const s=new THREE.Shape(), c0=(i/N)*PI*2;
+    for(let k=0;k<=6;k++){ const a=c0-half+2*half*k/6; const p=[COMM_R*Math.cos(a),COMM_R*Math.sin(a)]; k?s.lineTo(...p):s.moveTo(...p); }
+    for(let k=6;k>=0;k--){ const a=c0-half+2*half*k/6; s.lineTo(0.42*Math.cos(a),0.42*Math.sin(a)); }
+    const geo=new THREE.ExtrudeGeometry(s,{depth:COMM_Z1-COMM_Z0, bevelEnabled:false, curveSegments:6});
+    geo.translate(0,0,COMM_Z0);
+    g.add(new THREE.Mesh(geo, barMat));
+  }
+  const endRing = torusZ(0.34,0.035,M.micaGap(),36); endRing.position.z=COMM_Z1+0.01; g.add(endRing);
+  // CE bearing journal + collar (bright shaft end seen in the photo)
+  const collar = cylZ(0.22,0.22,0.06,M.steel(),32); collar.position.z=1.29; g.add(collar);
+  const journal = cylZ(0.17,0.17,0.32,M.steelPolish(),32); journal.position.z=1.47; g.add(journal);
+  return g;
+}
+
+// 12/15 + 18/19/32 — FIELD COIL wound on POLE SHOE (modeled on a Wilson replacement coil)
+// Pole shoe = curved face (air-gap side) + wide flat-backed body that fills the coil window.
+// Coil = one solid tape-wrapped bundle (rounded-rectangle section) whose back sits flush with the shoe back.
+const POLE = { faceR0:0.99, faceR1:1.15, faceA:0.72, faceL:0.72,   // curved face
+               ins:0.02,                                           // item 19 insulator thickness
+               rc:1.42, bw:0.46, bh:0.50,                          // coil mid radius, band width, band height
+               winHW:0.48, winHL:0.30 };                           // body / coil window half-sizes (arc length @rc, axial)
+// point on a rounded rectangle perimeter, t in [0,1) → [x, y, nx, ny]
+function rrPoint(hw, hl, cr, t){
+  const sx=hw-cr, sy=hl-cr, arc=cr*PI/2;
+  const segs=[2*sy,arc,2*sx,arc,2*sy,arc,2*sx,arc];
+  let d=t*segs.reduce((x,y)=>x+y,0), k=0;
+  while(k<7 && d>segs[k]){ d-=segs[k]; k++; }
+  const f=segs[k]?d/segs[k]:0;
+  const corner=(cx,cy,a0)=>{ const a=a0+f*PI/2; return [cx+cr*Math.cos(a), cy+cr*Math.sin(a), Math.cos(a), Math.sin(a)]; };
+  switch(k){
+    case 0: return [ hw, -sy+f*2*sy, 1,0];
+    case 1: return corner( sx, sy, 0);
+    case 2: return [ sx-f*2*sx,  hl, 0,1];
+    case 3: return corner(-sx, sy, PI/2);
+    case 4: return [-hw,  sy-f*2*sy,-1,0];
+    case 5: return corner(-sx,-sy, PI);
+    case 6: return [-sx+f*2*sx, -hl, 0,-1];
+    default:return corner( sx,-sy, 1.5*PI);
+  }
+}
+const TAPE_TEX = (()=>{                       // cotton tape wraps, varnished
+  const c=document.createElement('canvas'); c.width=64; c.height=64; const x=c.getContext('2d');
+  x.fillStyle='#c4703a'; x.fillRect(0,0,64,64);
+  for(let i=0;i<64;i+=4){
+    x.strokeStyle= i%8 ? 'rgba(255,214,160,.35)' : 'rgba(90,40,10,.35)'; x.lineWidth=1.4;
+    x.beginPath(); x.moveTo(i,0); x.lineTo(i+6,64); x.stroke();
+  }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.encoding=THREE.sRGBEncoding; return t;
+})();
+function buildCoilGeometry(){
+  const {rc,bw,bh,winHW,winHL}=POLE;
+  const hw=winHW+bw/2, hl=winHL+bw/2;            // band centerline
+  const N=180, Ms=28, pos=[], uv=[], idx=[];
+  let perim=0; { let p=rrPoint(hw,hl,0.16,0); for(let i=1;i<=N;i++){ const q=rrPoint(hw,hl,0.16,i/N); perim+=Math.hypot(q[0]-p[0],q[1]-p[1]); p=q; } }
+  for(let i=0;i<N;i++){
+    const [s,z,ns,nz]=rrPoint(hw,hl,0.16,i/N);
+    for(let j=0;j<Ms;j++){
+      const [u,v]=rrPoint(bw/2,bh/2,0.11,j/Ms);
+      const S=s+ns*u, Z=z+nz*u, R=rc+v, a=S/rc;
+      pos.push(R*Math.cos(a), R*Math.sin(a), Z);
+      uv.push(i/N*perim*7, j/Ms);
+    }
+  }
+  for(let i=0;i<N;i++) for(let j=0;j<Ms;j++){
+    const a=i*Ms+j, b=((i+1)%N)*Ms+j, c=((i+1)%N)*Ms+(j+1)%Ms, d=i*Ms+(j+1)%Ms;
+    idx.push(a,b,d, b,c,d);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+function buildFieldCoilWithShoe(side) {
+  const g = new THREE.Group();
+  g.rotation.z = side==='TOP' ? PI/2 : -PI/2;     // local X = toward the pole
+  const sector = (r0, r1, w, depth, mat)=>{
+    const s=new THREE.Shape(), n=28;
+    for(let i=0;i<=n;i++){ const a=-w+2*w*i/n; const p=[r0*Math.cos(a), r0*Math.sin(a)]; i?s.lineTo(...p):s.moveTo(...p); }
+    for(let i=n;i>=0;i--){ const a=-w+2*w*i/n; s.lineTo(r1*Math.cos(a), r1*Math.sin(a)); }
+    const geo=new THREE.ExtrudeGeometry(s,{depth, bevelEnabled:false, curveSegments:28});
+    geo.translate(0,0,-depth/2);
+    return new THREE.Mesh(geo, mat);
+  };
+  const P=POLE, coilBot=P.faceR1+P.ins, coilTop=P.rc+P.bh/2;
+  // pole shoe: curved face + body filling the coil window, back flush with the coil back
+  g.add(sector(P.faceR0, P.faceR1, P.faceA, P.faceL*2, M.ironDark()));
+  g.add(sector(P.faceR1-0.005, coilTop, (P.winHW-0.015)/P.rc, (P.winHL-0.015)*2, M.steel()));
+  // item 19 — fiber insulator between coil and shoe face
+  g.add(sector(P.faceR1, coilBot, P.faceA-0.03, P.faceL*2-0.04, M.fiber()));
+  // holes in the shoe back (tapped center hole + two small locating holes)
+  [[0,0.075],[0.20,0.035],[-0.20,0.035]].forEach(([z,r])=>{
+    const h=cylX(r, 0.02, M.ironDark(), 14); h.position.set(coilTop+0.005, z===0?0:-0.12*Math.sign(z), z); g.add(h);
+  });
+  // center pole screw (item 18): countersunk head outside the frame
+  const sh=cylX(0.045, 0.40, M.zinc(), 12); sh.position.set(1.72,0,0); g.add(sh);
+  const hd=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.05,0.05,16), M.zinc());
+  hd.rotation.z=-PI/2; hd.position.set(1.89,0,0); g.add(hd);
+  // coil
+  const tapeMat = std({map:TAPE_TEX.clone(), metalness:0.05, roughness:0.62});
+  tapeMat.map.needsUpdate=true;
+  g.add(new THREE.Mesh(buildCoilGeometry(), tapeMat));
+  return g;
+}
+
+// 16 — FIELD FRAME (rolled steel, painted green)
+function buildFieldFrame() {
+  const g = new THREE.Group();
+  g.add(lathe([[FR_IN,FR_Z1],[FR_OUT,FR_Z1],[FR_OUT,FR_Z0],[FR_IN,FR_Z0],[FR_IN,FR_Z1]], M.paintGreen(), 72));
+  [FR_Z1, FR_Z0].forEach(z=>{ const r=torusZ(1.79,0.05,M.paintGreenDk(),72); r.position.z=z; g.add(r); });
+  return g;
+}
+
+// 17 — DRIVE END SPACER COLLAR (inner)
+function buildDESpacerInner() { return cylZ(0.22,0.22,0.18, M.steel()); }
+
+// 21 — DRIVE END FRAME
+function buildDEFrame() {
+  const g = new THREE.Group();
+  g.add(lathe([
+    [0.18,-0.52],[0.42,-0.52],[0.46,-0.28],
+    [1.20,-0.10],[1.76, 0.00],[1.86, 0.10],[1.86, 0.30],
+    [1.78, 0.30],[1.78, 0.08],[1.14,-0.06],[0.36,-0.24],[0.30,-0.48],[0.18,-0.48]
+  ], M.paintGreenDk()));
+  const oiler = cylZ(0.12,0.12,0.26, M.steelDark(),14); oiler.position.set(0, 1.42, -0.20); g.add(oiler);
+  const cap = cylZ(0.10,0.10,0.08, M.zinc(),14); cap.position.set(0, 1.42, -0.38); g.add(cap);
+  const bore = cylZ(0.32,0.32,0.14, M.ironDark(),24); bore.position.z=-0.08; g.add(bore);
+  for (let i=0;i<8;i++){
+    const a=(i/8)*PI*2+PI/8;
+    const v = boxAt(0.14,0.26,0.06, M.ironDark(), Math.cos(a)*0.80, Math.sin(a)*0.80, -0.18);
+    v.rotation.z=a+PI/2; g.add(v);
+  }
+  g.add(boxAt(0.20,0.38,0.32, M.paintGreenDk(), 0,-1.60,-0.12));
+  return g;
+}
+
+// 22 — DRIVE END SPACER COLLAR (outer)
+function buildDESpacerOuter() { return cylZ(0.28,0.28,0.16, M.steel()); }
+
+// 23 — PULLEY + FAN (fan faces the generator)
+function buildPulleyFan() {
+  const g = new THREE.Group();
+  g.add(lathe([
+    [0.12,-0.26],[0.48,-0.26],[0.70,-0.18],[0.70,-0.08],[0.44, 0.00],
+    [0.70, 0.08],[0.70, 0.18],[0.48, 0.26],[0.12, 0.26],[0.12,-0.26]
+  ], M.steelDark()));
+  const hub = cylZ(0.25,0.25,0.06, M.zinc()); hub.position.z=0.32; g.add(hub);
+  for (let i=0;i<8;i++){
+    const p=new THREE.Group(); p.rotation.z=(i/8)*PI*2;
+    const blade=boxAt(0.54,0.22,0.04, M.zinc(), 0.56,0,0.36); blade.rotation.x=0.45; p.add(blade); g.add(p);
+  }
+  const rim = torusZ(0.88,0.026, M.zinc()); rim.position.z=0.38; g.add(rim);
+  return g;
+}
+
+// 24 / 29 — BALL BEARINGS
+function buildBearing(rO, w) {
+  const g = new THREE.Group();
+  g.add(lathe([[0.18,w],[rO,w],[rO,-w],[0.18,-w],[0.18,w]], M.steel(),36));
+  g.add(torusZ((0.18+rO)/2, w*0.3, M.steelDark(),16));
+  return g;
+}
+// 25 — LOCK WASHER
+function buildLockWasher() { return torusZ(0.20,0.038, M.zinc(),24); }
+// 26 — SHAFT NUT
+function buildShaftNut() { return hexNut(0.175, M.zinc()); }
+// 27 — BEARING CLAMP
+function buildBearingClamp() {
+  const g = new THREE.Group();
+  g.add(lathe([[0.18,0.024],[0.46,0.024],[0.46,-0.024],[0.18,-0.024],[0.18,0.024]], M.steelDark(),36));
+  for (let i=0;i<3;i++){ const a=(i/3)*PI*2; g.add(slotScrew(0.035, Math.cos(a)*0.38, Math.sin(a)*0.38, 0.04)); }
+  return g;
+}
+// 28 — GREASE SLINGER
+function buildGreaseSlinger() {
+  return lathe([[0.15,0.028],[0.55,0.028],[0.72,-0.028],[0.15,-0.028],[0.15,0.028]], M.steelDark(),36);
+}
+// 30 — GASKET
+function buildGasket() {
+  return lathe([[0.18,0.016],[0.56,0.016],[0.56,-0.016],[0.18,-0.016],[0.18,0.016]], M.gasket(),36);
+}
+// 31 — RETAINER PLATE
+function buildRetainerPlate() {
+  const g = new THREE.Group();
+  g.add(lathe([[0.16,0.030],[0.56,0.030],[0.56,-0.030],[0.16,-0.030],[0.16,0.030]], M.steelDark(),36));
+  for (let i=0;i<3;i++){ const a=(i/3)*PI*2; const s=slotScrew(0.035, Math.cos(a)*0.44, Math.sin(a)*0.44, -0.04); s.rotation.x=PI; g.add(s); }
+  return g;
+}
+// 34–35 — THRU BOLTS (run inside the field frame, between poles)
+function buildThruBolts() {
+  const g = new THREE.Group();
+  const zA=-1.62, zB=1.74;
+  BOLT_ANG.forEach(deg=>{
+    const p = cylP(deg, BOLT_R, 0);
+    const bolt = cylZ(0.048,0.048,zB-zA, M.zinc(),12); bolt.position.set(p.x,p.y,(zA+zB)/2); g.add(bolt);
+    const head = cylZ(0.095,0.095,0.10, M.zinc(),6); head.position.set(p.x,p.y,zB+0.05); g.add(head);
+    [zB-0.01, zA+0.02].forEach(z=>{ const w=torusZ(0.10,0.024,M.zinc(),18); w.position.set(p.x,p.y,z); g.add(w); });
+  });
+  return g;
+}
+
+// ═══════════════════════════════════════════
+//  PARTS ROSTER — assembled & exploded positions
+// ═══════════════════════════════════════════
+const PARTS = [
+  { id:'brg_plug',     name:'Bearing Well Plug (item 10)',       group:'Commutator End', color:'#30483f', build:buildBearingPlug,  asm:[0,0, 2.24], exp:[0,0, 7.00] },
+  { id:'brg_clamp',    name:'Bearing Clamp (item 27)',           group:'Commutator End', color:'#6b6f74', build:buildBearingClamp, asm:[0,0, 2.14], exp:[0,0, 6.50] },
+  { id:'bearing_ce',   name:'Ball Bearing, CE (item 24)',        group:'Commutator End', color:'#cfd2d6', build:()=>buildBearing(0.40,0.14), asm:[0,0, 1.98], exp:[0,0, 6.00] },
+  { id:'ce_frame',     name:'End Frame, Comm. (item 1)',         group:'Commutator End', color:'#30483f', build:buildCEFrame,      asm:[0,0, 1.68], exp:[0,0, 5.20] },
+
+  { id:'brush_assy',   name:'Brush Holders & Brushes (items 2–8)', group:'Inside Field Frame', color:'#c98552', build:buildBrushAssembly, asm:[0,0,0], exp:[0,0, 2.20] },
+  { id:'leads',        name:'Internal Leads & Junction Clip',    group:'Inside Field Frame', color:'#c8201c', build:buildLeads,        asm:[0,0,0], exp:[0,0, 1.30] },
+  { id:'terminals',    name:'Terminal Studs A & F (items 9,13,14)', group:'Inside Field Frame', color:'#7d7a4a', build:buildTerminals, asm:[0,0,0], exp:[0,1.30,0.50] },
+  { id:'armature',     name:'Armature (item 11)',                group:'Inside Field Frame', color:'#b5703f', build:buildArmature,     asm:[0,0,0], exp:[0,0,0] },
+  { id:'field_coil_rh',name:'Field Coil + Pole Shoe, Top (items 12,18,19,32)', group:'Inside Field Frame', color:'#c4703a', build:()=>buildFieldCoilWithShoe('TOP'), asm:[0,0,0], exp:[0, 2.40,-1.55] },
+  { id:'field_coil_lh',name:'Field Coil + Pole Shoe, Bot (items 15,18,19,32)', group:'Inside Field Frame', color:'#c4703a', build:()=>buildFieldCoilWithShoe('BOT'), asm:[0,0,0], exp:[0,-2.40,-1.55] },
+  { id:'field_frame',  name:'Field Frame Housing (item 16)',     group:'Inside Field Frame', color:'#3e5d53', build:buildFieldFrame,   asm:[0,0,0], exp:[0,0,-1.55] },
+
+  { id:'de_spacer_in', name:'Spacer Collar, Inner (item 17)',    group:'Drive End', color:'#cfd2d6', build:buildDESpacerInner, asm:[0,0,-1.30], exp:[0,0,-2.50] },
+  { id:'de_frame',     name:'End Frame, Drive (item 21)',        group:'Drive End', color:'#30483f', build:buildDEFrame,       asm:[0,0,-1.55], exp:[0,0,-3.70] },
+  { id:'grease_sling', name:'Grease Slinger Plate (item 28)',    group:'Drive End', color:'#6b6f74', build:buildGreaseSlinger, asm:[0,0,-1.84], exp:[0,0,-4.30] },
+  { id:'bearing_de',   name:'Ball Bearing, DE (item 29)',        group:'Drive End', color:'#cfd2d6', build:()=>buildBearing(0.42,0.16), asm:[0,0,-1.95], exp:[0,0,-4.90] },
+  { id:'gasket',       name:'Retainer Plate Gasket (item 30)',   group:'Drive End', color:'#8b6914', build:buildGasket,        asm:[0,0,-2.10], exp:[0,0,-5.40] },
+  { id:'retainer_plt', name:'Retainer Plate, DE (item 31)',      group:'Drive End', color:'#6b6f74', build:buildRetainerPlate, asm:[0,0,-2.18], exp:[0,0,-5.70] },
+  { id:'de_spacer_out',name:'Spacer Collar, Outer (item 22)',    group:'Drive End', color:'#cfd2d6', build:buildDESpacerOuter, asm:[0,0,-2.50], exp:[0,0,-6.30] },
+  { id:'pulley_fan',   name:'Pulley & Fan (item 23)',            group:'Drive End', color:'#6b6f74', build:buildPulleyFan,     asm:[0,0,-3.00], exp:[0,0,-7.10] },
+  { id:'lock_washer',  name:'Lock Washer (item 25)',             group:'Drive End', color:'#b0b4ba', build:buildLockWasher,    asm:[0,0,-3.30], exp:[0,0,-7.90] },
+  { id:'shaft_nut',    name:'Shaft Nut (item 26)',               group:'Drive End', color:'#b0b4ba', build:buildShaftNut,      asm:[0,0,-3.40], exp:[0,0,-8.40] },
+
+  { id:'thru_bolts',   name:'Thru Bolts & Washers (items 34,35)', group:'Hardware', color:'#b0b4ba', build:buildThruBolts,    asm:[0,0,0], exp:[0,0, 4.00] },
+];
+
+const PART_INFO = {
+  shaft_nut:    { fn:'Hex nut on the threaded drive-end shaft nose. Clamps the pulley/fan, outer spacer and bearing inner race together.', specs:[['Item','26'],['Torque','See manual']] },
+  lock_washer:  { fn:'Lock washer under the shaft nut that keeps the nut from backing off under belt vibration.', specs:[['Item','25']] },
+  brg_clamp:    { fn:'Clamp plate that holds the commutator-end ball bearing in the CE frame bore.', specs:[['Item','27'],['Screws','3']] },
+  bearing_ce:   { fn:'Commutator-end ball bearing. Supports the armature journal (the bright shaft end visible above the commutator).', specs:[['Item','24'],['Lube','Bearing well / grease']] },
+  brg_plug:     { fn:'Plug that closes the bearing well in the CE frame and holds the lubricant in.', specs:[['Item','10']] },
+  ce_frame:     { fn:'Commutator End Frame — the cap that closes the brush end of the field frame and carries the CE bearing. With it removed you see the view in the shop photo: commutator, two brush holders, spring arms and leads.', specs:[['Item','1'],['PN','IH-1939907'],['Alt','IH-1800213']] },
+  brush_assy:   { fn:'Two box-type copper-plated brush holders mounted on the inside wall of the field frame, roughly 180° apart. The insulated holder (left, on the green fiber plate) feeds the A terminal; the grounded holder (right) bolts straight to the frame. A pivoting spring arm presses each carbon brush onto the commutator, and a braided copper pigtail carries current from the brush to its tab screw.', specs:[['Items','2–8'],['Holders','1 insulated, 1 grounded'],['Check','Brush length, spring tension, free slide in holder'],['Note','Lift spring arms before removing the armature']] },
+  leads:        { fn:'Cloth-braided internal leads. The armature lead runs from the insulated brush to the A terminal. The F terminal feeds the top field coil; a sleeved series lead links it to the bottom coil, whose end lands on the junction clip at 6 o\'clock. The red lead grounds the field circuit at the grounded brush (A-circuit field).', specs:[['Circuit','A-circuit (field grounded inside)'],['Inspect','Frayed braid, cracked sleeve, loose clip screw'],['Tip','Tag every lead before disconnecting']] },
+  terminals:    { fn:'Armature (A) and field (F) terminal studs passing through the field frame. Fiber insulator blocks inside and Bakelite bushings plus fiber washers outside keep both studs isolated from the grounded frame.', specs:[['Items','9, 13, 14, 20, 36'],['Insulation','Fiber blocks + Bakelite bushings'],['Caution','A dead short here grounds generator output']] },
+  armature:     { fn:'Rotating member: laminated iron core with copper windings soldered to the commutator risers. The 26 copper bars are separated by undercut mica; the brushes pick off current so the external output is DC.', specs:[['Item','11'],['PN','IH-1939904'],['Commutator','26 bars, mica undercut'],['Test','Growler, bar-to-bar, runout, mica depth']] },
+  field_coil_rh:{ fn:'Top shunt field coil: one cotton-tape-wrapped bundle that fits over the pole shoe body. The shoe body fills the coil window and its flat back sits flush with the coil against the frame; a center screw from outside holds it. The curved shoe face lips under the coil, separated by a fiber insulator (item 19), and spreads the field flux across the air gap to the armature.', specs:[['Item','12 (coil), 32 (shoe)'],['PN','IH-1939889'],['Shoe screw','Item 18 (center, countersunk)'],['Insulator','Item 19, fiber'],['Test','Coil resistance, insulation to frame']] },
+  field_coil_lh:{ fn:'Bottom shunt field coil — the opposite pole. Wired in series with the top coil so the two create a north and a south pole.', specs:[['Item','15 (coil), 32 (shoe)'],['PN','IH-1939890'],['Tip','Use a pole-shoe screwdriver and spreader on reassembly']] },
+  field_frame:  { fn:'Rolled-steel field frame (painted). Carries the pole shoes, brush holders and terminal studs, and acts as the magnetic return path between the two poles.', specs:[['Item','16'],['Frame','5⅝″ dia.'],['Holds','Poles, brushes, A & F studs']] },
+  de_spacer_in: { fn:'Inner spacer between the armature and the drive-end bearing inner race; sets armature end position.', specs:[['Item','17'],['PN','IH-1861591']] },
+  de_frame:     { fn:'Drive End Frame — carries the DE ball bearing, retainer plate and oiler, and the mounting ear.', specs:[['Item','21'],['PN','IH-1962410']] },
+  grease_sling: { fn:'Slinger plate that throws excess grease outward so it does not reach the armature windings.', specs:[['Item','28'],['PN','IH-1947344']] },
+  bearing_de:   { fn:'Drive-end ball bearing. Takes the belt side load, so it wears faster than the CE bearing.', specs:[['Item','29'],['Lube','Oiler in DE frame']] },
+  gasket:       { fn:'Gasket under the DE retainer plate; seals the bearing cavity.', specs:[['Item','30'],['PN','IH-1912008']] },
+  retainer_plt: { fn:'Retainer plate holding the DE bearing outer race in the frame. Three screws.', specs:[['Item','31'],['PN','IH-1955494'],['Screws','Item 33']] },
+  de_spacer_out:{ fn:'Outer spacer between the DE bearing and the pulley/fan hub.', specs:[['Item','22'],['PN','IH-1959991']] },
+  pulley_fan:   { fn:'V-belt pulley with cooling fan. The fan pulls air through the generator from the commutator end to the drive end.', specs:[['Item','23'],['PN','IH-404964-R1'],['Note','Order separately']] },
+  thru_bolts:   { fn:'Two long thru-bolts that run inside the field frame, between the poles, and clamp both end frames to it. Scribe alignment marks before removal.', specs:[['Items','34–35'],['Bolt PN','IH-809763'],['Washer PN','IH-9421424']] },
+};
+
+// pos: optional per-part target for that step (else the part's exploded position)
+const STEPS = [
+  { ids:['shaft_nut'],     desc:'Remove the shaft nut (item 26) from the drive-end shaft nose.' },
+  { ids:['lock_washer'],   desc:'Slide the lock washer (item 25) off the shaft.' },
+  { ids:['pulley_fan'],    desc:'Pull the pulley and fan (item 23). Use a puller if it is seized on the shaft.' },
+  { ids:['de_spacer_out'], desc:'Remove the outer drive-end spacer collar (item 22).' },
+  { ids:['thru_bolts'],    desc:'Scribe alignment marks across both end frames and the field frame, then pull the two thru-bolts (items 34–35) out from the commutator end.' },
+  { ids:['brg_plug'],      desc:'Remove the bearing well plug (item 10) from the CE frame.' },
+  { ids:['brg_clamp'],     desc:'Remove the three screws and lift off the CE bearing clamp (item 27).' },
+  { ids:['ce_frame'],      desc:'Lift off the commutator end frame (item 1). The brush end is now open — compare with the shop photo: two brush holders, spring arms, braided leads and the junction clip.', view:'photo' },
+  { ids:['bearing_ce'],    desc:'Remove the CE ball bearing (item 24). Inspect for roughness and play.' },
+  { ids:['brush_assy'],    desc:'Lift each spring arm, pull the carbon brushes, then remove the holder screws and brush holders (items 2–8). Measure brush length.' },
+  { ids:['leads'],         desc:'Tag and disconnect the internal leads: armature lead, F lead, coil series lead, junction clip and red ground lead.' },
+  { ids:['terminals'],     desc:'Remove the A and F terminal stud nuts, bushings and fiber insulators (items 9, 13, 14, 20, 36). Keep every insulator.' },
+  { ids:['retainer_plt'],  desc:'Remove the three retainer plate screws (item 33) and lift off the DE retainer plate (item 31).' },
+  { ids:['gasket'],        desc:'Lift off the retainer plate gasket (item 30). Replace if compressed or torn.' },
+  { ids:['de_frame'],      desc:'Separate the drive-end frame (item 21) by tapping gently with a soft mallet.' },
+  { ids:['bearing_de'],    desc:'Remove the drive-end ball bearing (item 29).' },
+  { ids:['grease_sling'],  desc:'Slide the grease slinger plate (item 28) off the shaft.' },
+  { ids:['de_spacer_in'],  desc:'Remove the inner drive-end spacer collar (item 17).' },
+  { ids:['field_frame','field_coil_rh','field_coil_lh'], pos:{ field_coil_rh:[0,0,-1.55], field_coil_lh:[0,0,-1.55] },
+                           desc:'Slide the field frame (item 16) off the armature. The field coils and pole shoes stay inside the frame.' },
+  { ids:['field_coil_rh'], desc:'Remove the top pole shoe screws (item 18) with a pole-shoe screwdriver and lift out the top coil and shoe (items 12, 19, 32).' },
+  { ids:['field_coil_lh'], desc:'Remove the bottom pole shoe screws and lift out the bottom coil and shoe (items 15, 19, 32). The armature (item 11) is now bare: inspect commutator wear and mica depth, then growler test.' },
+];
+
+// ═══════════════════════════════════════════
+//  THREE.JS SCENE
+// ═══════════════════════════════════════════
+const canvas = document.getElementById('canvas3d');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1117);
+const camera = new THREE.PerspectiveCamera(42,1,0.1,300);
+scene.add(camera);
+
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x1a1410, 0.75));
+const key = new THREE.DirectionalLight(0xfff2dd,1.10); key.position.set(6,9,7);  scene.add(key);
+const fill= new THREE.DirectionalLight(0x9db4ff,0.40); fill.position.set(-7,2,-5);scene.add(fill);
+const rimL= new THREE.DirectionalLight(0x44ff88,0.20); rimL.position.set(0,-4,-8); scene.add(rimL);
+const headLamp = new THREE.PointLight(0xfff4e6, 0.45, 40); camera.add(headLamp);   // lights the inside of the frame
+
+const grid = new THREE.GridHelper(40,40,0x1e2832,0x161c26); grid.position.y=-2.9; scene.add(grid);
+const lineMat = new THREE.LineDashedMaterial({color:0x2a3848, dashSize:0.25, gapSize:0.18});
+const cl = new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0,0,9.5),V(0,0,-9.5)]), lineMat);
+cl.computeLineDistances(); scene.add(cl);
+
+const partMeshes={}, partObjects={};
+PARTS.forEach(p=>{
+  const mesh=p.build();
+  mesh.position.set(...p.asm);
+  mesh.traverse(c=>{ if(c.isMesh) c.userData.partId=p.id; });
+  mesh.userData.partId=p.id;
+  partMeshes[p.id]=mesh; partObjects[p.id]=p;
+  scene.add(mesh);
+});
+
+// ═══════════════════════════════════════════
+//  EXPLODE
+// ═══════════════════════════════════════════
+let explodeFactor=0, targetExplode=0, animatingExplode=false;
+const slider=document.getElementById('explodeSlider');
+function setPartsTo(t){
+  PARTS.forEach(p=>{
+    const m=partMeshes[p.id];
+    if(m.userData.stepLocked) return;
+    m.position.set(p.asm[0]+(p.exp[0]-p.asm[0])*t, p.asm[1]+(p.exp[1]-p.asm[1])*t, p.asm[2]+(p.exp[2]-p.asm[2])*t);
+  });
+}
+slider.addEventListener('input',()=>{
+  if(stepMode) exitStepMode();
+  explodeFactor=targetExplode=slider.value/100; animatingExplode=false;
+  setPartsTo(explodeFactor);
+});
+
+// ═══════════════════════════════════════════
+//  HIGHLIGHT
+// ═══════════════════════════════════════════
+let selectedId=null;
+const savedMats=new Map();
+function highlightPart(id){
+  if(selectedId&&selectedId!==id) dehighlightPart(selectedId);
+  if(selectedId===id) return;
+  selectedId=id;
+  partMeshes[id].traverse(c=>{
+    if(c.isMesh){
+      savedMats.set(c.uuid,c.material);
+      c.material=c.material.clone();
+      c.material.emissive=new THREE.Color(0x4caf7d);
+      c.material.emissiveIntensity=0.40;
+    }
+  });
+}
+function dehighlightPart(id){
+  partMeshes[id].traverse(c=>{
+    if(c.isMesh&&savedMats.has(c.uuid)){ c.material.dispose(); c.material=savedMats.get(c.uuid); savedMats.delete(c.uuid); }
+  });
+}
+function dehighlightAll(){ if(selectedId) dehighlightPart(selectedId); selectedId=null; }
+
+// ═══════════════════════════════════════════
+//  ORBIT CAMERA
+// ═══════════════════════════════════════════
+const HOME = {theta:0.85, phi:1.15, radius:15};
+let sph={...HOME};
+const target=V(0,0,0);
+let autoRotate=false, isDown=false, isRight=false, lastX=0, lastY=0;
+
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{ canvas.setPointerCapture(e.pointerId);
+  if(e.button===2) isRight=true; else isDown=true; lastX=e.clientX; lastY=e.clientY; });
+canvas.addEventListener('pointermove',e=>{
+  const dx=e.clientX-lastX, dy=e.clientY-lastY;
+  if(isDown){ sph.theta-=dx*0.008; sph.phi=Math.max(0.12,Math.min(PI-0.12,sph.phi+dy*0.008)); }
+  if(isRight){
+    const right=V(), up=V();
+    camera.matrix.extractBasis(right, up, V());
+    target.addScaledVector(right, -dx*0.010*sph.radius/14).addScaledVector(up, dy*0.010*sph.radius/14);
+  }
+  lastX=e.clientX; lastY=e.clientY;
+});
+canvas.addEventListener('pointerup',()=>{ isDown=false; isRight=false; });
+canvas.addEventListener('wheel',e=>{ e.preventDefault(); sph.radius=Math.max(3,Math.min(36,sph.radius+e.deltaY*0.022)); },{passive:false});
+
+function updateCamera(){
+  camera.position.set(
+    target.x + sph.radius*Math.sin(sph.phi)*Math.sin(sph.theta),
+    target.y + sph.radius*Math.cos(sph.phi),
+    target.z + sph.radius*Math.sin(sph.phi)*Math.cos(sph.theta)
+  );
+  camera.lookAt(target);
+}
+
+// ═══════════════════════════════════════════
+//  PICKING
+// ═══════════════════════════════════════════
+const raycaster=new THREE.Raycaster(), mouse=new THREE.Vector2();
+let downTime=0;
+const tooltip=document.getElementById('tooltip');
+const pickables=[];
+scene.traverse(c=>{ if(c.isMesh&&c.userData.partId) pickables.push(c); });
+function pick(e){
+  const r=canvas.getBoundingClientRect();
+  mouse.x=((e.clientX-r.left)/r.width)*2-1; mouse.y=-((e.clientY-r.top)/r.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  return raycaster.intersectObjects(pickables).find(h=>{
+    let o=h.object; while(o){ if(!o.visible) return false; o=o.parent; } return true;
+  });
+}
+canvas.addEventListener('pointerdown',()=>{ downTime=Date.now(); });
+canvas.addEventListener('pointerup',e=>{
+  if(Date.now()-downTime>230) return;
+  const h=pick(e);
+  if(h) selectPart(h.object.userData.partId);
+  else { dehighlightAll(); showNoSelection(); }
+});
+canvas.addEventListener('pointermove',e=>{
+  if(isDown||isRight){ tooltip.style.display='none'; return; }
+  const h=pick(e);
+  if(h){
+    tooltip.style.display='block';
+    tooltip.style.left=(e.clientX+14)+'px'; tooltip.style.top=(e.clientY-10)+'px';
+    tooltip.textContent=partObjects[h.object.userData.partId].name;
+    canvas.style.cursor='pointer';
+  } else { tooltip.style.display='none'; canvas.style.cursor='default'; }
+});
+
+// ═══════════════════════════════════════════
+//  UI
+// ═══════════════════════════════════════════
+function setVisible(id, vis){
+  partMeshes[id].visible=vis;
+  const li=document.getElementById('pi_'+id); if(li) li.classList.toggle('hidden-part',!vis);
+}
+function buildPartsList(){
+  const list=document.getElementById('partsList');
+  const groups={};
+  PARTS.forEach(p=>{ (groups[p.group]=groups[p.group]||[]).push(p); });
+  Object.entries(groups).forEach(([g,parts])=>{
+    const label=document.createElement('div');
+    label.className='part-group-label'; label.textContent=g; list.appendChild(label);
+    parts.forEach(p=>{
+      const item=document.createElement('div');
+      item.className='part-item'; item.id='pi_'+p.id;
+      item.innerHTML=`<div class="part-dot" style="background:${p.color}"></div>
+        <div class="part-name">${p.name}</div>
+        <div class="part-vis" title="Toggle visibility">👁</div>`;
+      item.addEventListener('click',e=>{ if(e.target.classList.contains('part-vis')) return; selectPart(p.id); });
+      item.querySelector('.part-vis').addEventListener('click',()=> setVisible(p.id, !partMeshes[p.id].visible));
+      list.appendChild(item);
+    });
+  });
+}
+function selectPart(id){
+  highlightPart(id);
+  document.querySelectorAll('.part-item').forEach(el=>el.classList.remove('active'));
+  const li=document.getElementById('pi_'+id);
+  if(li){ li.classList.add('active'); li.scrollIntoView({block:'nearest'}); }
+  showPartDetail(id);
+}
+function showPartDetail(id){
+  const p=partObjects[id], info=PART_INFO[id]||{};
+  document.getElementById('partDetail').innerHTML=`
+    <h2>${p.name.split('(')[0].trim()}</h2>
+    <div class="part-id">${id.toUpperCase()} · ${p.group}</div>
+    ${info.fn?`<div class="detail-section"><div class="detail-label">Function</div>
+      <div class="detail-text">${info.fn}</div></div>`:''}
+    ${info.specs?`<div class="detail-section"><div class="detail-label">Specs / Notes</div>
+      <table class="spec-table">${info.specs.map(s=>`<tr><td>${s[0]}</td><td>${s[1]}</td></tr>`).join('')}</table></div>`:''}`;
+}
+function showNoSelection(){
+  document.getElementById('partDetail').innerHTML=`
+    <div class="no-selection"><div class="icon">⚙</div>Click any component to see details.</div>`;
+  document.querySelectorAll('.part-item').forEach(el=>el.classList.remove('active'));
+}
+
+// ── Commutator-end view (matches the shop photo) ──
+const CE_HIDE=['ce_frame','bearing_ce','brg_clamp','brg_plug','thru_bolts'];
+let photoView=false;
+function setPhotoCamera(){
+  sph={theta:0.14, phi:PI/2+0.38, radius:6.6}; target.set(0,0,0.9);
+}
+function enterPhotoView(){
+  photoView=true;
+  if(!stepMode){ targetExplode=0; explodeFactor=0; setPartsTo(0); slider.value=0; animatingExplode=false; }
+  CE_HIDE.forEach(id=>setVisible(id,false));
+  setPhotoCamera();
+  document.getElementById('btnPhoto').classList.add('active-btn');
+  document.getElementById('photoHint').style.display='block';
+}
+function exitPhotoView(){
+  photoView=false;
+  CE_HIDE.forEach(id=>setVisible(id,true));
+  sph={...HOME}; target.set(0,0,0);
+  document.getElementById('btnPhoto').classList.remove('active-btn');
+  document.getElementById('photoHint').style.display='none';
+}
+
+// ═══════════════════════════════════════════
+//  STEP MODE
+// ═══════════════════════════════════════════
+let stepMode=false, currentStep=-1;
+function buildStepDots(){
+  const dots=document.getElementById('stepDots'); dots.innerHTML='';
+  STEPS.forEach((s,i)=>{
+    const d=document.createElement('div'); d.className='step-dot'; d.textContent=i+1;
+    d.addEventListener('click',()=>goToStep(i)); dots.appendChild(d);
+  });
+}
+function resetToAssembled(){
+  PARTS.forEach(p=>{ const m=partMeshes[p.id]; m.userData.stepLocked=false; m.userData.hist=[]; m.position.set(...p.asm); });
+}
+function enterStepMode(){
+  if(photoView) exitPhotoView();
+  stepMode=true; currentStep=-1;
+  slider.value=0; explodeFactor=targetExplode=0; animatingExplode=false;
+  PARTS.forEach(p=>setVisible(p.id,true));
+  resetToAssembled();
+  document.getElementById('stepPanel').style.display='flex';
+  document.getElementById('stepHint').style.display='block';
+  document.getElementById('btnStepMode').classList.add('active-btn');
+  buildStepDots(); updateStepDots();
+  document.getElementById('stepDesc').textContent='Press Next to begin disassembly.';
+}
+function exitStepMode(){
+  stepMode=false;
+  document.getElementById('stepPanel').style.display='none';
+  document.getElementById('stepHint').style.display='none';
+  document.getElementById('btnStepMode').classList.remove('active-btn');
+  resetToAssembled();
+}
+function doStep(n,dir){
+  const step=STEPS[n]; if(!step) return;
+  step.ids.forEach(id=>{
+    const m=partMeshes[id], p=partObjects[id];
+    m.userData.hist=m.userData.hist||[];
+    if(dir==='forward'){
+      m.userData.hist.push(m.position.toArray());
+      m.position.set(...((step.pos&&step.pos[id])||p.exp));
+      m.userData.stepLocked=true;
+    } else {
+      const prev=m.userData.hist.pop();
+      m.position.set(...(prev||p.asm));
+      m.userData.stepLocked=m.userData.hist.length>0;
+    }
+  });
+  if(dir==='forward'){
+    selectPart(step.ids[0]);
+    if(step.view==='photo'){ setPhotoCamera(); }
+  }
+  document.getElementById('stepDesc').textContent=`Step ${n+1}: ${step.desc}`;
+}
+function goToStep(n){
+  if(n>currentStep){ for(let i=currentStep+1;i<=n;i++) doStep(i,'forward'); }
+  else { for(let i=currentStep;i>n;i--) doStep(i,'backward'); }
+  currentStep=n; updateStepDots();
+  if(currentStep>=0) document.getElementById('stepDesc').textContent=`Step ${currentStep+1}: ${STEPS[currentStep].desc}`;
+}
+function updateStepDots(){
+  document.querySelectorAll('.step-dot').forEach((d,i)=>{
+    d.classList.remove('done','current');
+    if(i<currentStep) d.classList.add('done'); else if(i===currentStep) d.classList.add('current');
+  });
+}
+document.getElementById('btnNextStep').addEventListener('click',()=>{
+  if(stepMode&&currentStep<STEPS.length-1){ doStep(++currentStep,'forward'); updateStepDots(); }
+});
+document.getElementById('btnPrevStep').addEventListener('click',()=>{
+  if(stepMode&&currentStep>=0){
+    doStep(currentStep,'backward'); currentStep--; updateStepDots();
+    document.getElementById('stepDesc').textContent=currentStep>=0
+      ?`Step ${currentStep+1}: ${STEPS[currentStep].desc}`:'Press Next to begin disassembly.';
+  }
+});
+document.getElementById('btnExitStep').addEventListener('click',exitStepMode);
+document.addEventListener('keydown',e=>{
+  if(!stepMode) return;
+  if(e.key==='ArrowRight') document.getElementById('btnNextStep').click();
+  if(e.key==='ArrowLeft')  document.getElementById('btnPrevStep').click();
+});
+
+// ═══════════════════════════════════════════
+//  HEADER BUTTONS
+// ═══════════════════════════════════════════
+document.getElementById('btnExplode').addEventListener('click',()=>{ if(stepMode)exitStepMode(); if(photoView)exitPhotoView(); targetExplode=1; animatingExplode=true; });
+document.getElementById('btnAssemble').addEventListener('click',()=>{ if(stepMode)exitStepMode(); targetExplode=0; animatingExplode=true; });
+document.getElementById('btnPhoto').addEventListener('click',()=>{ photoView?exitPhotoView():enterPhotoView(); });
+document.getElementById('btnStepMode').addEventListener('click',()=>{ stepMode?exitStepMode():enterStepMode(); });
+document.getElementById('btnAutoRotate').addEventListener('click',e=>{ autoRotate=!autoRotate; e.currentTarget.classList.toggle('active-btn',autoRotate); });
+document.getElementById('btnReset').addEventListener('click',()=>{
+  if(stepMode) exitStepMode();
+  if(photoView) exitPhotoView();
+  PARTS.forEach(p=>setVisible(p.id,true));
+  sph={...HOME}; target.set(0,0,0);
+  targetExplode=0; animatingExplode=true;
+  dehighlightAll(); showNoSelection();
+});
+
+// ═══════════════════════════════════════════
+//  RESIZE + LOOP
+// ═══════════════════════════════════════════
+function resize(){
+  const w=canvas.clientWidth, h=canvas.clientHeight;
+  if(!w||!h) return;
+  renderer.setSize(w,h,false);
+  camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(canvas); resize();
+
+let lastT=0;
+function animate(t){
+  requestAnimationFrame(animate);
+  const dt=Math.min((t-lastT)/1000,0.05); lastT=t;
+  if(autoRotate) sph.theta+=dt*0.32;
+  if(animatingExplode&&!stepMode){
+    explodeFactor+=(targetExplode-explodeFactor)*0.08;
+    if(Math.abs(explodeFactor-targetExplode)<0.002){ explodeFactor=targetExplode; animatingExplode=false; }
+    setPartsTo(explodeFactor);
+    slider.value=Math.round(explodeFactor*100);
+  }
+  updateCamera();
+  renderer.render(scene,camera);
+}
+animate(0);
+
+buildPartsList();
+setTimeout(()=>{
+  const L=document.getElementById('loading');
+  L.style.opacity='0'; L.style.transition='opacity .4s';
+  setTimeout(()=>L.style.display='none',400);
+},1200);
+</script>
+</body>
+</html>
